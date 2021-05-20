@@ -30,6 +30,8 @@
 using System;
 using Grpc.Core;
 using Com.Example.Grpc;
+using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace GreeterClient
 {
@@ -37,7 +39,7 @@ namespace GreeterClient
     {
         const string Host = "localhost";
         const int Port = 50051;
- 
+
         public static void Main(string[] args)
         {
             // Create a channel
@@ -47,17 +49,27 @@ namespace GreeterClient
             var client = new GreetingService.GreetingServiceClient(channel);
 
             // Create a request
-            var request = new HelloRequest{
+            var request = new HelloRequest
+            {
                 Name = "Mete - on C#",
                 Age = 34,
                 Sentiment = Sentiment.Happy
             };
 
-            // Send the request
-            Console.WriteLine("GreeterClient sending request");
-            var response = client.greeting(request);
+            var pingTasks = new Task[1000];
+            var stopwatch = Stopwatch.StartNew();
+            for (var i = 0; i < pingTasks.Length; i++)
+            {
+                pingTasks[i] = Task.Factory.StartNew(() =>
+                {
+                    var response = client.greeting(request);
+                    //Console.WriteLine("GreeterClient received response: " + response.Greeting);
+                });
+            }
+            Task.WaitAll(pingTasks);
+            stopwatch.Stop();
 
-            Console.WriteLine("GreeterClient received response: " + response.Greeting);
+            Console.WriteLine($"Ping for {pingTasks.Length} tasks took: {stopwatch.ElapsedMilliseconds}ms");
 
             // Shutdown
             channel.ShutdownAsync().Wait();
